@@ -1,17 +1,19 @@
 CXX=@CXX@
-CC=@CC@
 LD=@CXX@
 CXXFLAGS=@CXXFLAGS@
-CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 
-build/jamb: build/jamb.o
+build/jamb: build/jamb.o build/miniaudio.o
 	$(LD) -Iinc/ -o $@ $^ $(LDFLAGS) $(LIBS)
+
+build/%.o: src/%.c
+	$(CXX) -Iinc/ $< $(CXXFLAGS) -c -o $@
 
 build/%.o: src/%.cpp
 	$(CXX) -Iinc/ $< $(CXXFLAGS) -c -o $@
 
 .PHONY: clean
 clean:
-	rm -f jamb *.o
+	rm -f build/jamb build/*.o
+
