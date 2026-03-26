@@ -1,5 +1,4 @@
 #pragma once
-#include "audioplayable.hpp"
 #include <taglib/fileref.h>
 #include <vector>
 #include <unordered_map>
@@ -7,7 +6,9 @@
 #include <filesystem>
 #include <optional>
 
-template <typename Playable, typename Identifier, bool (*acceptable)(const std::filesystem::directory_entry &),
+template <typename Playable, 
+	  typename Identifier, 
+	  bool (*acceptable)(const std::filesystem::directory_entry &) = Playable::acceptable,
 	  typename AssociativeContainer = std::unordered_map<Identifier, Playable>,
 	  typename NameList = std::vector<Identifier>>
 class Library{
@@ -23,7 +24,7 @@ public:
 			if(!acceptable(dir_entry)){
 				continue;
 			}
-			AudioMetaData meta (TagLib::FileRef(dir_entry.path().c_str()));
+			Identifier meta (TagLib::FileRef(dir_entry.path().c_str()));
 			metadata.emplace(
 				meta ,
 				dir_entry.path());

@@ -1,17 +1,25 @@
 CXX=@CXX@
+CC=@CC@
 LD=@CXX@
 CXXFLAGS=@CXXFLAGS@
+CFLAGS=@CFLAGS@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 
-build/jamb: build/jamb.o build/miniaudio.o
-	$(LD) -Iinc/ -o $@ $^ $(LDFLAGS) $(LIBS)
+build/jamb: build/jamb.o build/miniaudio.o build/sqlite.o
+	$(LD) -Iinc/ -Isqlite/ -o $@ $^ $(LDFLAGS) $(LIBS)
 
 build/%.o: src/%.c
-	$(CXX) -Iinc/ $< $(CXXFLAGS) -c -o $@
+	$(C) -Iinc/ -Isqlite/ $< $(CFLAGS) -c -o $@
 
 build/%.o: src/%.cpp
-	$(CXX) -Iinc/ $< $(CXXFLAGS) -c -o $@
+	$(CXX) -Iinc/ -Isqlite/ $< $(CXXFLAGS) -c -o $@
+
+build/sqlite.o:
+	$(CC) sqlite/sqlite3.c -c -o $@ $(CFLAGS)
+
+compile_commands.json: Makefile
+	compiledb -n make # can also use bear -- make -B
 
 .PHONY: clean
 clean:
