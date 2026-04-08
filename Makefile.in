@@ -1,19 +1,14 @@
-CXX=@CXX@
 CC=@CC@
-LD=@CXX@
-CXXFLAGS=@CXXFLAGS@
-CFLAGS=@CFLAGS@
+LD=@CC@
+CFLAGS=@CFLAGS@ @glib_CFLAGS@ -DPACKAGE_VERSION=@PACKAGE_VERSION@
 LDFLAGS=@LDFLAGS@
-LIBS=@LIBS@
+LIBS=@LIBS@ @glib_LIBS@
 
-build/jamb: build/jamb.o build/miniaudio.o build/sqlite.o
+build/jamb: build/jamb.o build/miniaudio.o build/sqlite.o build/errorcode.o build/state.o build/player_manager.o
 	$(LD) -Iinc/ -Isqlite/ -o $@ $^ $(LDFLAGS) $(LIBS)
 
-build/%.o: src/%.c
-	$(C) -Iinc/ -Isqlite/ $< $(CFLAGS) -c -o $@
-
-build/%.o: src/%.cpp
-	$(CXX) -Iinc/ -Isqlite/ $< $(CXXFLAGS) -c -o $@
+build/%.o: src/%.c inc/errorcode.h
+	$(CC) -Iinc/ -Isqlite/ $< $(CFLAGS) -c -o $@
 
 build/sqlite.o:
 	$(CC) sqlite/sqlite3.c -c -o $@ $(CFLAGS)
