@@ -13,6 +13,7 @@ AC_SEARCH_LIBS([_cstr_init], [stc], [],
    [AC_MSG_ERROR([stc is required])], [])
 
 PKG_CHECK_MODULES([glib], [glib-2.0 >= 2.62.0])
+PKG_CHECK_MODULES([json], [json-c])
 
 AC_CHECK_HEADERS([stc/cstr.h], [],
 		 [AC_MSG_ERROR(STC is required)]) dnl todo compress all this

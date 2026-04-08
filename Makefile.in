@@ -1,10 +1,11 @@
 CC=@CC@
 LD=@CC@
-CFLAGS=@CFLAGS@ @glib_CFLAGS@ -DPACKAGE_VERSION=@PACKAGE_VERSION@
+CFLAGS=@CFLAGS@ @glib_CFLAGS@ @json_CFLAGS@ -DPACKAGE_VERSION=@PACKAGE_VERSION@
 LDFLAGS=@LDFLAGS@
-LIBS=@LIBS@ @glib_LIBS@
+LIBS=@LIBS@ @glib_LIBS@ @json_LIBS@
+OBJS=build/jamb.o build/errorcode.o build/state.o build/player_manager.o build/player.o build/sqlite.o
 
-build/jamb: build/jamb.o build/miniaudio.o build/sqlite.o build/errorcode.o build/state.o build/player_manager.o
+build/jamb: $(OBJS)
 	$(LD) -Iinc/ -Isqlite/ -o $@ $^ $(LDFLAGS) $(LIBS)
 
 build/%.o: src/%.c inc/errorcode.h
