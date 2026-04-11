@@ -1,0 +1,115 @@
+@title JAMB 1 07/04/2026 jamb
+
+@h1 NAME
+
+jamb - general purpose "jam" tool
+
+@h1 SYNOPSIS
+
+jamb [*options*]
+
+@h1 DESCRIPTION
+
+jamb is a program that syncs streams (arbitrary pausable, playable, seekable 
+files) across arbitrary players across two or more computers, with the more
+specific goal of syncing music playback between two seperate users in a
+player and file-type agnostic manner.
+
+@h1 OPTIONS
+
+TODO
+
+@h1 EXAMPLES
+
+TODO
+
+@h1 PLAYER
+
+A player is a backend that handles matching and playing streamable files based 
+on predicates. Players are defined in subfolders in *JAMB_PREFIX/players*. All
+players share a common file in their root, called conf.json.
+
+A player consists of different functions that jamb calls at runtime.
+Unless otherwise indicated, all functions return jamb status codes.
+All metadata is json-encoded.
+
+*start()*
+	Starts a player. Any necessary initialization may be performed here.
+
+*score(metadata)*
+	Returns a number indicating how close a match the player has to the 
+	metadata. A negative number means nothing appropriate was found or an
+	error was encountered, 0 means one or more metadata fields are 
+	mismatched, and 1 means a full match was found.
+
+*setup(metadata)*
+	Sets up a stream given metadata. setup(metadata) and all functions 
+	below are guaranteed to be run only if score(metadata) >= 0
+
+*cleanup()*
+	Cleans up the current stream such that the player is ready for the
+	next call of setup()
+
+*play()*
+	Plays the current stream.
+
+*pause()*
+	Pauses the current stream.
+
+*seek(cursor_t)*
+	Seeks the current stream to a cursor.
+
+*get_cursor()*
+	Returns the current cursor. If an error is encountered, a value
+	of -1 or cursor_t_max - 1 must be returned.
+
+*get_real_metadata()*
+	Returns the metadata of the *currently playing stream*, not
+	necessarily the metadata from score() or setup().
+
+@h2 TYPES OF PLAYERS
+
+The type of player (and thus the way that jamb will interface with it) is
+defined by a key called "type" in the root object of a player's conf.json.
+
+*SCRIPT*
+	Functions will be called as ./player [function-name] '[args]', and 
+	return values are read from stdout. Jamb status codes may be expressed
+	either as integers or as capital letter strings, with the latter
+	being preferable for portability should the order of the error codes
+	change.
+
+*C*
+	Functions will be called via cdecl. Function names must match
+	precisely, metadata is passed as a string, and state is passed via
+	a pointer to player_t. statuses are returned as integers (preferably
+	compiling with inc/errorcode.h to use the enum members). The player
+	must be a library with the name player.so
+	
+
+@h2 DEFAULT PLAYERS
+
+Jamb comes with several players that are stored in /etc/jamb/players
+
+@h1 FILES
+
+The default JAMB_PREFIX is *~/.local/share/jamb*.
+
+*/etc/jamb/config.ini*
+	Default configuration file for jamb. It is suggested to make a copy of this file to 
+	*JAMB_PREFIX/config.ini* and edit any necessary fields 
+
+*JAMB_PREFIX/config.ini*
+	Configuration file for jamb
+
+*JAMB_PREFIX/players/*
+	Where all jamb's players are stored. See *PLAYER*
+
+@h1 AUTHOR
+
+jamb is made by emelia AKA porcelain-slightly <emaleksan\@gmail.com>
+
+@h1 BUGS
+
+Report bugs to emelia <emaleksan\@gmail.com>, or on the github
+issue tracker at mid-at-coding/jamb

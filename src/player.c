@@ -13,7 +13,8 @@
 
 // TODO factor
 
-static int val(char input){
+static int val(char input)
+{
 	if(input >= '0' && input <= '9')
 		return input - '0';
 	if(isalpha(input))
@@ -21,7 +22,8 @@ static int val(char input){
 	return -1;
 }
 
-static bool isdigit_radix(const char input, const unsigned int radix){
+static bool isdigit_radix(const char input, const unsigned int radix)
+{
 	int res = val(input);
 	if(res == -1)
 		return false;
@@ -33,7 +35,8 @@ typedef struct {
 	int status;
 } atoi_res_ll;
 
-static atoi_res_ll safe_atoi_ll(const char *input, const int radix){
+static atoi_res_ll safe_atoi_ll(const char *input, const int radix)
+{
 	atoi_res_ll res = {0};
 	if(radix < 2 || radix > 36){ // UB
 		res.status = EINVAL;
@@ -53,7 +56,7 @@ static atoi_res_ll safe_atoi_ll(const char *input, const int radix){
 		for(const char *c = input; *c; c++){
 			if(isspace(*c)) // the leading whitespace must be specified by isspace (7.22.1.4 #2)
 				continue;
-			if(!isdigit_radix(*c, radix)) // custom function that's written to specs defined in 7.22.1.4 #3
+			if(!isdigit_radix(*c, radix)) 
 				res.status = EINVAL;
 		}
 	}
@@ -61,36 +64,52 @@ static atoi_res_ll safe_atoi_ll(const char *input, const int radix){
 }
 
 /* creates a pipe, runs a command, copies the output, and frees the command */
-static char *read_command(player_t *player, char *cmd)
+static char *read_command(char *cmd)
 {
-	FILE *pipe = popen(cmd, "r");
+	FILE *pipe = popen(cmd, "re");
 	if(!pipe){
 		free(cmd);
 		return NULL;
 	}
 	
-	char res[1024];
 
-	if(!fgets(res, sizeof(res), pipe)){
-		log_out("Script returned nothing!", LOG_WARN);
-		pclose(pipe);
-		free(cmd);
-		return NULL;
+	const size_t step_size = 1024;
+	size_t size_res = 0;
+	char buf[step_size];
+	char *res = NULL;
+	char *tmp;
+
+	while(fgets(buf, step_size, pipe)){
+		tmp = malloc(size_res);
+		if(!tmp)
+			return "{}";
+		memcpy(tmp, res, size_res);
+		size_res += step_size;
+		free(res);
+		res = malloc(size_res);
+		if(!tmp)
+			return "{}";
+		size_t offset = size_res - step_size;
+		if(offset) offset--; // get rid of null terminator
+		memcpy(res + offset, buf, step_size);
+		memcpy(res, tmp, offset);
+		res[size_res - 1] = 0;
+		free(tmp);
 	}
 
-	size_t len = strlen(res) + 1;
-	char *str = malloc(len);
-	strcpy(str, res);
-	pclose(pipe);
 	free(cmd);
-	return str;
+	return res;
 }
+
 
 /* creates a pipe, runs a command, collects a status code, and frees the 
  * command and pipe */
-static jamb_status_t run_command(player_t *player, char *cmd)
+static jamb_status_t run_command(char *cmd)
 {
-	FILE *pipe = popen(cmd, "r");
+	FILE *pipe = popen(cmd, "re"); // e lets this function return as
+				       // soon as it gets input, and allows
+				       // the player to stay alive
+	logf_out("Running %s...", LOG_TRACE, cmd);	
 	if(!pipe){
 		free(cmd);
 		return JAMB_BACKEND_ERROR;
@@ -101,14 +120,28 @@ static jamb_status_t run_command(player_t *player, char *cmd)
 	if(!fgets(res, sizeof(res), pipe)){
 		log_out("Script returned nothing, assuming JAMB_OK",
 				LOG_WARN);
-		pclose(pipe);
 		free(cmd);
 		return JAMB_OK;
 	}
 
-	pclose(pipe);
 	free(cmd);
 	return jamberrorstr(res);
+}
+
+jamb_status_t script_start(void *this)
+{
+	player_t *th = this;
+	assert(th->type == PLAYER_SCRIPT);
+
+	size_t len = snprintf(NULL, 0, "%s start", 
+			th->as.script.dir);
+	char *command = malloc(len + 1);
+	snprintf(command, len + 1, "%s start",
+			th->as.script.dir);
+	if(!command)
+		return JAMB_NO_MEMORY;
+
+	return run_command(command);
 }
 
 jamb_status_t script_setup(void* this, metadata m)
@@ -116,15 +149,15 @@ jamb_status_t script_setup(void* this, metadata m)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s setup %s", 
+	size_t len = snprintf(NULL, 0, "%s setup '%s'", 
 			th->as.script.dir, m);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s setup %s",
+	snprintf(command, len + 1, "%s setup '%s'",
 			th->as.script.dir, m);
 	if(!command)
 		return JAMB_NO_MEMORY;
 
-	return run_command(this, command);
+	return run_command(command);
 }
 
 jamb_status_t script_cleanup(void* this)
@@ -132,15 +165,15 @@ jamb_status_t script_cleanup(void* this)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s cleanup", 
+	size_t len = snprintf(NULL, 0, "%s cleanup", 
 			th->as.script.dir);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s cleanup",
+	snprintf(command, len + 1, "%s cleanup",
 			th->as.script.dir);
 	if(!command)
 		return JAMB_NO_MEMORY;
 
-	return run_command(this, command);
+	return run_command(command);
 }
 
 jamb_status_t script_play(void* this)
@@ -148,15 +181,15 @@ jamb_status_t script_play(void* this)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s play", 
+	size_t len = snprintf(NULL, 0, "%s play", 
 			th->as.script.dir);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s play",
+	snprintf(command, len + 1, "%s play",
 			th->as.script.dir);
 	if(!command)
 		return JAMB_NO_MEMORY;
 
-	return run_command(this, command);
+	return run_command(command);
 }
 
 jamb_status_t script_pause(void* this)
@@ -164,15 +197,15 @@ jamb_status_t script_pause(void* this)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s pause", 
+	size_t len = snprintf(NULL, 0, "%s pause", 
 			th->as.script.dir);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s pause",
+	snprintf(command, len + 1, "%s pause",
 			th->as.script.dir);
 	if(!command)
 		return JAMB_NO_MEMORY;
 
-	return run_command(this, command);
+	return run_command(command);
 }
 
 jamb_status_t script_seek(void* this, cursor_t cursor)
@@ -180,15 +213,15 @@ jamb_status_t script_seek(void* this, cursor_t cursor)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s seek %ld", 
+	size_t len = snprintf(NULL, 0, "%s seek %ld", 
 			th->as.script.dir, cursor);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s seek %ld",
+	snprintf(command, len + 1, "%s seek %ld",
 			th->as.script.dir, cursor);
 	if(!command)
 		return JAMB_NO_MEMORY;
 
-	return run_command(this, command);
+	return run_command(command);
 }
 
 cursor_t script_get_cursor(void* this)
@@ -196,15 +229,15 @@ cursor_t script_get_cursor(void* this)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s get_cursor", 
+	size_t len = snprintf(NULL, 0, "%s get_cursor", 
 			th->as.script.dir);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s get_cursor",
+	snprintf(command, len + 1, "%s get_cursor",
 			th->as.script.dir);
 	if(!command)
 		return -1;
 
-	char *returned = read_command(this, command);
+	char *returned = read_command(command);
 	atoi_res_ll r = safe_atoi_ll(returned, 10);
 	if(r.status){
 		logf_out("Could not parse %s as a number!", LOG_WARN,
@@ -221,15 +254,15 @@ int script_score(void* this, metadata m)
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
 
-	size_t len = snprintf(NULL, 0, "./%s get_cursor", 
-			th->as.script.dir);
+	size_t len = snprintf(NULL, 0, "%s score '%s'", 
+			th->as.script.dir, m);
 	char *command = malloc(len + 1);
-	snprintf(command, len, "./%s get_cursor",
-			th->as.script.dir);
+	snprintf(command, len + 1, "%s score '%s'",
+			th->as.script.dir, m);
 	if(!command)
 		return -1;
 
-	char *returned = read_command(this, command);
+	char *returned = read_command(command);
 	atoi_res_ll r = safe_atoi_ll(returned, 10);
 	if(r.status){
 		logf_out("Could not parse %s as a number!", LOG_WARN,
@@ -241,10 +274,18 @@ int script_score(void* this, metadata m)
 	return r.res;
 }
 
-char *script_get_real_metadata(void* this)
+metadata script_get_real_metadata(void* this)
 {
 	player_t *th = this;
 	assert(th->type == PLAYER_SCRIPT);
-	assert(0);
-	return 0;
+	size_t len = snprintf(NULL, 0, "%s get_real_metadata", 
+			th->as.script.dir);
+	char *command = malloc(len + 1);
+	snprintf(command, len + 1, "%s get_real_metadata",
+			th->as.script.dir);
+	if(!command)
+		return "{}";
+
+	char *returned = read_command(command);
+	return returned;
 }

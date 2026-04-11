@@ -14,6 +14,12 @@ build/%.o: src/%.c inc/errorcode.h
 build/sqlite.o:
 	$(CC) sqlite/sqlite3.c -c -o $@ $(CFLAGS)
 
+doc/jamb.1: doc/ttman doc/jamb.txt
+	./doc/ttman doc/jamb.txt $@
+
+doc/ttman: doc/ttman.c
+	$(CC) doc/ttman.c -o doc/ttman
+
 compile_commands.json: Makefile
 	compiledb -n make # can also use bear -- make -B
 
