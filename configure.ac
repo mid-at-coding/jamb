@@ -1,6 +1,6 @@
 AC_INIT([jamb],[version-0.1-pre])
 dnl m4_include([macros/ax_cxx_check_lib.m4])
-AC_CONFIG_MACRO_DIR([m4])
+# AC_CONFIG_MACRO_DIR([m4])
 
 dnl AC_PROG_CXX
 
