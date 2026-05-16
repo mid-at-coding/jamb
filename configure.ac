@@ -29,4 +29,5 @@ AC_CHECK_HEADERS([dirent.h], [],
 dnl AC_SEARCH_LIBS(cubeb_init, [cubeb])
 dnl AC_SEARCH_LIBS(_ZNK6TagLib10FileStream4nameEv, [tag])
 AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([players/miniaudio/Makefile])
 AC_OUTPUT

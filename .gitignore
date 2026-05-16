@@ -1,0 +1,12 @@
+configure
+configure~
+compile_commands.json
+.cache
+Makefile
+autom4te.cache
+build/
+config.log
+config.status
+doc/ttman
+doc/jamb.1
+aclocal.m4

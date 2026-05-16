@@ -1,0 +1,9 @@
+CC=@CC@
+LD=@CC@
+CFLAGS=@CFLAGS@ @json_CFLAGS@ -DPACKAGE_VERSION=@PACKAGE_VERSION@
+LDFLAGS=@LDFLAGS@
+LIBS=@LIBS@ @json_LIBS@
+OBJS=player.so
+
+player.so: player.c ../../build/sqlite.o
+	$(CC) -I. -I../../sqlite -c -o $@ $< $(CFLAGS) $(LDFLAGS)

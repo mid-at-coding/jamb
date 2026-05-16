@@ -3,9 +3,15 @@ LD=@CC@
 CFLAGS=@CFLAGS@ @glib_CFLAGS@ @json_CFLAGS@ -DPACKAGE_VERSION=@PACKAGE_VERSION@
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@ @glib_LIBS@ @json_LIBS@
-OBJS=build/jamb.o build/errorcode.o build/state.o build/player_manager.o build/player.o build/sqlite.o
+JAMB_OBJS=build/jamb.o build/errorcode.o build/state.o build/player_manager.o build/player.o build/sqlite.o
+OBJS=build/sqlite.o
+PLAYER_MAKEFILES=players/miniaudio/Makefile
 
-build/jamb: $(OBJS)
+.PHONY: clean all
+
+all: build/jamb players
+
+build/jamb: $(JAMB_OBJS)
 	$(LD) -Iinc/ -Isqlite/ -o $@ $^ $(LDFLAGS) $(LIBS)
 
 build/%.o: src/%.c inc/errorcode.h
@@ -23,7 +29,9 @@ doc/ttman: doc/ttman.c
 compile_commands.json: Makefile
 	compiledb -n make # can also use bear -- make -B
 
-.PHONY: clean
+players: $(PLAYER_MAKEFILES) $(OBJS)
+	make -C players/miniaudio
+
 clean:
 	rm -f build/jamb build/*.o
 
