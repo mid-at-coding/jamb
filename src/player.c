@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <ctype.h>
+#include <dlfcn.h>
 #include <limits.h>
 #define LOG_H_ENUM_PREFIX_
 #define LOG_H_NAMESPACE_ 
@@ -288,4 +289,14 @@ metadata script_get_real_metadata(void* this)
 
 	char *returned = read_command(command);
 	return returned;
+}
+
+jamb_status_t player_destruct(player_t* p)
+{
+	if(p->type == PLAYER_C){
+		if(dlclose(p->as.c.handle))
+			return JAMB_UNSPECIFIED;
+	}
+	return JAMB_OK;
+		
 }

@@ -17,6 +17,7 @@ int main(int argc, char **argv)
 {
 	gboolean version = FALSE;
 	gboolean verbose = FALSE;
+	gboolean vverbose = FALSE;
 	gboolean test = FALSE;
 	gchar *prefix = NULL;
 	GOptionEntry entries[] = {
@@ -26,6 +27,8 @@ int main(int argc, char **argv)
 			"Set a prefix for jamb's database", NULL },
 		{ "verbose", '\0', 0, G_OPTION_ARG_NONE, &verbose, 
 			"Make jamb verbose", NULL },
+		{ "vverbose", '\0', 0, G_OPTION_ARG_NONE, &vverbose, 
+			"Make jamb very verbose", NULL },
 		{ "test", 't', 0, G_OPTION_ARG_NONE, &test, 
 			"Run jamb's self-test", NULL },
 		{ NULL }
@@ -47,6 +50,9 @@ int main(int argc, char **argv)
 	g_option_context_free(ctx);
 
 	if(verbose == TRUE){
+		set_log_level(LOG_DBG);
+	}
+	else if(vverbose == TRUE){
 		set_log_level(LOG_TRACE);
 	}
 	else{
@@ -77,6 +83,7 @@ int main(int argc, char **argv)
 			log_out("Could not get an appropriate player!",
 					LOG_TRACE);
 		}
+		player_destruct(player);
 	}
 
 	save_state(NULL);

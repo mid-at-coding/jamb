@@ -7,7 +7,7 @@ JAMB_OBJS=build/jamb.o build/errorcode.o build/state.o build/player_manager.o bu
 OBJS=build/sqlite.o
 PLAYER_MAKEFILES=players/miniaudio/Makefile
 
-.PHONY: clean all
+.PHONY: clean all tags
 
 all: build/jamb players
 
@@ -35,3 +35,5 @@ players: $(PLAYER_MAKEFILES) $(OBJS)
 clean:
 	rm -f build/jamb build/*.o
 
+tags:
+	ctags src/*.c

@@ -3,6 +3,7 @@
 #include "errorcode.h"
 #include "player.h"
 #include "state.h"
+#include "stream.h"
 
 // Loads players from /etc/jamb and the state's directory into the state
 jamb_status_t load_players(state*);

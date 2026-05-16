@@ -20,7 +20,7 @@ typedef struct abstract_stream_t {
 } abstract_stream_t;
 
 typedef struct {
-	abstract_stream_t s;
 	void* p_data;
+	abstract_stream_t s;
 } stream_t;
 #endif

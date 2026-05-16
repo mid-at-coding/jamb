@@ -11,19 +11,60 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dlfcn.h>
 #include <dirent.h>
 #include <errno.h>
 #define LOG_H_ENUM_PREFIX_
 #define LOG_H_NAMESPACE_ 
 #include "logging.h"
 
-void add_c_player(const char *dir)
+static jamb_status_t add_c_player(const char *c_dir, player_t *new)
 {
-	
+	logf_out("Adding C player at path %s", LOG_TRACE, c_dir);
+	new->as.c.handle = dlopen(c_dir, RTLD_NOW);
+	if(!new->as.c.handle){
+		logf_out("dlopen failed on %s", LOG_WARN, c_dir);
+		struct stat sb;
+		if(stat(c_dir, &sb) && errno == ENOENT){
+			logf_out("Note: %s does not exist", LOG_WARN,
+					c_dir);
+		}
+		return JAMB_INVALID_PLAYER;
+	}
+
+	new->type = PLAYER_C;
+	new->get_real_metadata   = dlsym(new->as.c.handle, "get_real_metadata");
+	new->score               = dlsym(new->as.c.handle, "score");
+	new->start               = dlsym(new->as.c.handle, "start");
+	new->stream.s.setup      = dlsym(new->as.c.handle, "setup");
+	new->stream.s.cleanup    = dlsym(new->as.c.handle, "cleanup");
+	new->stream.s.play       = dlsym(new->as.c.handle, "play");
+	new->stream.s.pause      = dlsym(new->as.c.handle, "pause");
+	new->stream.s.seek       = dlsym(new->as.c.handle, "seek");
+	new->stream.s.get_cursor = dlsym(new->as.c.handle, "pause");
+
+	// check if all symbols are non-NULL
+	// NOTE: there may be some situations where a NULL is allowed, but I don't
+	// think they will really come up
+	if(new->get_real_metadata &&
+	   new->score &&
+	   new->start &&
+	   new->stream.s.setup &&
+	   new->stream.s.cleanup &&
+	   new->stream.s.play &&
+	   new->stream.s.pause &&
+	   new->stream.s.seek &&
+	   new->stream.s.get_cursor)
+		return JAMB_OK;
+
+	logf_out("One or more expected symbols in %s are null", LOG_WARN, c_dir);
+
+	return JAMB_INVALID_PLAYER;
 }
 
 jamb_status_t add_player(const char *dir, const char *name, state *s)
 {
+	jamb_status_t return_value = JAMB_OK;
 	errno = 0;
 	FILE *fp = fopen(dir, "r");
 	if(!fp){
@@ -87,36 +128,64 @@ jamb_status_t add_player(const char *dir, const char *name, state *s)
 		new->stream.s.pause      = script_pause;
 		new->stream.s.seek       = script_seek;
 		new->stream.s.get_cursor = script_get_cursor;
+
 		strcpy(new->as.script.dir, dir);
-		*strrchr(new->as.script.dir, '/') = 0;
-		if(strlen(new->as.script.dir) + strlen("/player") 
-				>= PATH_MAX)
-			return JAMB_BAD_PATH;
+		
+		// I'm actually not sure if it is more correct to check for this or 
+		// not -- can a valid player path have no /?
+		if(strrchr(new->as.script.dir, '/'))
+			*strrchr(new->as.script.dir, '/') = 0;
+
+		if(strlen(new->as.script.dir) + strlen("/player") >= PATH_MAX){
+			return_value = JAMB_BAD_PATH;
+			goto early_exit;
+		}
+
 		strcat(new->as.script.dir, "/player");
 	}
 	else if(strcmp("C", type_str) == 0){
 		new->type = PLAYER_C;
-		*strrchr(new->as.script.dir, '/') = 0;
-		if(strlen(new->as.script.dir) + strlen("/player.so") 
-				>= PATH_MAX)
-			return JAMB_BAD_PATH;
-		strcat(new->as.script.dir, "/player.so");
-		assert(0);
+
+		char *c_dir = malloc(strlen(dir) + 1);
+
+		if(!c_dir){
+			return_value = JAMB_NO_MEMORY;
+			goto early_exit;
+		}
+
+		strcpy(c_dir, dir);
+
+		if(strrchr(c_dir, '/'))
+			*strrchr(c_dir, '/') = 0;
+
+		if(strlen(c_dir) + strlen("/player.so") >= PATH_MAX){
+			return_value = JAMB_BAD_PATH;
+			goto early_exit;
+		}
+
+		strcat(c_dir, "/player.so");
+		
+		if((return_value = add_c_player(c_dir, new)) 
+				!= JAMB_OK){
+			goto early_exit;
+		}
 	}
 	else{
 		logf_out("Value of 'type' is neither SCRIPT nor C",
 				LOG_WARN, dir);
-		free(new);
-		free(file_str);
-		json_object_put(obj);
-		return JAMB_INVALID_PLAYER;
+
+		return_value = JAMB_INVALID_PLAYER;
+		goto early_exit;
 	}
 
 	vec_player_push(&s->p_players, new);
 
+early_exit:
+	if(return_value != JAMB_OK)
+		free(new);
 	free(file_str);
 	json_object_put(obj);
-	return JAMB_OK;
+	return return_value;
 }
 
 jamb_status_t load_players_from_path(const char *wd, state *s)
@@ -206,11 +275,12 @@ jamb_status_t load_players_from_path(const char *wd, state *s)
 			
 			jamb_status_t res;
 			if((res = add_player(full_name, direntp->d_name, s))){
-				logf_out("Could not add player %s"
+				logf_out("Could not add player %s "
 					 "(%s)", LOG_WARN,
 					 direntp->d_name, 
 					 strjamberror(res));
 			}
+			// TODO call player->start?
 
 		}
 	}

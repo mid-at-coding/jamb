@@ -83,8 +83,12 @@ defined by a key called "type" in the root object of a player's conf.json.
 	Functions will be called via cdecl. Function names must match
 	precisely, metadata is passed as a string, and state is passed via
 	a pointer to player_t. statuses are returned as integers (preferably
-	compiling with inc/errorcode.h to use the enum members). The player
-	must be a library with the name player.so
+	compiling with inc/errorcode.h to use the enum members). Cursor_t
+	is a typedef of uint64_t, though prefereably should be used instead
+	should the definition ever change. The player must be a library with 
+	the name player.so. The first argument to each call is a void* which
+	is constant to each function call, pointing to a stream_t associated
+	with the player.
 	
 
 @h2 DEFAULT PLAYERS
